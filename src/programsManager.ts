@@ -2,6 +2,8 @@ import { Program, IProgram } from "./program";
 import axios from "axios";
 import cheerio from "cheerio";
 import TelegramBot from "node-telegram-bot-api";
+import fs from "fs-extra";
+import path from "path";
 
 interface IProgramsManager {
   bot: TelegramBot;
@@ -12,19 +14,39 @@ interface IProgramsManager {
 class ProgramsManager implements IProgramsManager {
   public programs: Map<string, IProgram>;
   public chats: Set<number>;
+  private token: string;
   public bot: TelegramBot;
 
-  constructor(private token: string) {
+  constructor() {
+    const {
+      token,
+      chats = [],
+    }: { token: string; chats?: number[] } = fs.readJSONSync(
+      path.join(__dirname, "..", "settings.json")
+    );
+    this.token = token;
     this.bot = new TelegramBot(token, { polling: true });
-    this.chats = new Set();
+
+    this.chats = new Set(chats);
     this.programs = new Map();
     this.initBot();
-    this.fetchProgram();
   }
   initBot(): void {
     this.bot.onText(/\/notify/, (msg, match) => {
       this.chats.add(msg.chat.id);
+      this.saveSettings();
       this.bot.sendMessage(msg.chat.id, "OK");
+    });
+    this.bot.onText(/\/unnotify/, (msg, match) => {
+      this.chats.delete(msg.chat.id);
+      this.saveSettings();
+      this.bot.sendMessage(msg.chat.id, "unsubscribed");
+    });
+  }
+  saveSettings(): void {
+    fs.writeJsonSync(path.join(__dirname, "..", "settings.json"), {
+      token: this.token,
+      chats: [...this.chats],
     });
   }
   hasProgram(program: Program): boolean {
