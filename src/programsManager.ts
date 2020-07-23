@@ -61,7 +61,7 @@ class ProgramsManager implements IProgramsManager {
     return [...this.programs.values()];
   }
   async fetchProgram() {
-    const html = await axios.get("https://fun.ssu.ac.kr/ko/program/all/list/all/1?sort=date");
+    const html = await axios.get("https://fun.ssu.ac.kr/ko/program");
     const $ = cheerio.load(html.data);
     $(".columns-4 li").each((index, element) => {
       const program: Program = new Program($(element));
